@@ -1,0 +1,57 @@
+{
+    // REQUIRED PARAMETERS
+    
+    // The application ID that is in the Partner tenant.
+    // The application must be a multi-tenant application
+    // The application must have the user_impersonation permission in Microsoft Partner Center (app ID fa3d9a0c-3fb0-42cc-9193-47c7ecd2edbd)
+    "PARTNER_APP_ID": "",
+
+    // The application ID that is in the Client tenant.
+    // If the application does not exist, the application will be created.
+    // It is ideal to keep the application ID the same as PARTNER_APP_ID,
+    // else the technician will need to re-authenticate.
+    "CLIENT_APP_ID": "",
+
+    // If the application does not exist,
+    // the following name will be used to create the application
+    "CLIENT_APP_NAME": "",
+
+
+
+    // OPTIONAL PARAMETERS
+
+    // Make both applications use the device code flow.
+    // This will prompt the technician to type in a code to https://microsoft.com/devicelogin
+    // This is the more secure option, in theory, because technicians
+    // do not sign in to client machines. By default, this is disabled.
+    // Both applications must have device code flow enabled (App registration > Authentication)
+    // for this to work. If partner and client app IDs are the same, only the partner app registration
+    // needs device code flow enabled.
+    "DEVICE_CODE_AUTH": true,
+
+    // Use the following to set a default group tag.
+    // Setting FORCE_DEF_GROUP_TAG to true will force the group tag specified
+    // and bypass user input.
+    "DEFAULT_GROUP_TAG": "",
+    "FORCE_DEF_GROUP_TAG": true,
+
+    // Use the following to set a default client tenant.
+    // You can specify a tenant ID or a domain belonging to the tenant
+    // Setting FORCE_DEF_TENANT to true will force the tenant specified
+    // and bypass user input.
+    "DEFAULT_TENANT": "",
+    "FORCE_DEF_TENANT": false,
+
+
+    // Enable the ability to assign users.
+    // https://learn.microsoft.com/en-us/autopilot/tutorial/user-driven/azure-ad-join-assign-device-to-user
+    // Note that, due to least privilege, users cannot be verified present
+    // in the client tenant. 
+    "ENABLE_ASSIGN_USER": false,
+
+    // Set a timer to allow Intune to soak, in seconds.
+    // This makes it easier to reboot directly into the Autopilot interface.
+    // Set to 0 to disable. Default is 300 (5 minutes).
+    "SOAK_TIME": 300
+
+}
