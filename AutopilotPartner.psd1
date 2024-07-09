@@ -5,9 +5,15 @@
     Author = 'Onslivion'
     Description = 'A module designed to import devices to Intune / Autopilot (directly) using Microsoft Partner delegation.'
     FunctionsToExport = @('Import-Autopilot')
+    RequiredModules = @(
+        'WindowsAutoPilotIntune',
+        'PartnerCenter'
+    )
 
     PrivateData = @{
         PSData = @{
+            ProjectUri = "https://github.com/Onslivion/AutopilotPartner"
+            Tags = @('Intune','Autopilot','Windows','PSEdition_Desktop','CSP','Partner')
             ReleaseNotes = 
             @'
             Version 1.0.0: Initial release
