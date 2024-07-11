@@ -305,7 +305,7 @@ function Import-Autopilot {
     }
 
     $settings = $settings -replace '(?m)(?<=^([^"]|"[^"]*")*)//.*' -replace '(?ms)/\*.*?\*/'
-    $settings = ConvertFrom-Json $settings
+    $settings = $settings | ConvertFrom-Json
 
     # Check if required values are present in settings.json
     if (!$settings.PARTNER_APP_ID -or !$settings.CLIENT_APP_ID -or !$settings.CLIENT_APP_NAME) {
