@@ -427,16 +427,16 @@ function Import-Autopilot {
     $importIdentity = Add-AutopilotImportedDevice -serialNumber $device."Device Serial Number" -hardwareIdentifier $device."Hardware Hash" -groupTag $GroupTag -assignedUser $AssignedUser
     Wait-UntilComplete -Device $importIdentity
 
-    # Remove tracks.
+    # Remove tracks. This may not work properly (it is what it is).
     Write-Host "Removing all installed modules..."
     Write-Progress -Activity "Removing installed modules" -Status "Removing PartnerCenter" -PercentComplete 0
     Remove-Module -Name PartnerCenter -Force 
     Write-Progress -Activity "Removing installed modules" -Status "Removing WindowsAutoPilotIntune" -PercentComplete 25
     Remove-Module -Name WindowsAutoPilotIntune -Force
 
-    Write-Progress -Activity "Removing installed modules" -Status "Removing PartnerCenter" -PercentComplete 50
+    Write-Progress -Activity "Removing installed modules" -Status "Uninstalling PartnerCenter" -PercentComplete 50
     Uninstall-Module -Name PartnerCenter -Force
-    Write-Progress -Activity "Removing installed modules" -Status "Removing PartnerCenter" -PercentComplete 75
+    Write-Progress -Activity "Removing installed modules" -Status "Uninstalling WindowsAutoPilotIntune" -PercentComplete 75
     Uninstall-Module -Name WindowsAutoPilotIntune -Force
 
     # Wait for soak.
@@ -444,7 +444,7 @@ function Import-Autopilot {
     if (!$settings.SOAK_TIME){ $soakSecs = 300 }
     else { $soakSecs = $settings.SOAK_TIME }
 
-    for ($i = 0; $i -le $soakSecs; i++) {
+    for ($i = 0; $i -le $soakSecs; $i++) {
         Write-Progress -Activity "Awaiting Soak" -SecondsRemaining $($soakSecs - $i) -PercentComplete $($i / $soakSecs)
         Start-Sleep 1
     }
