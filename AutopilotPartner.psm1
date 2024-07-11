@@ -398,16 +398,13 @@ function Import-Autopilot {
     try {
         New-PartnerCustomerApplicationConsent -ApplicationGrants @($grant) -CustomerId $customer.CustomerId -ApplicationId $settings.CLIENT_APP_ID -DisplayName $settings.CLIENT_APP_NAME
     }
-    catch [Microsoft.Store.PartnerCenter.Exceptions.PartnerException] {
+    catch {
         if ($_ -eq ("Permission entry already exists.")) {
             Write-Host "The application registration already exists in the tenant. Proceeding."
         }
         else {
             Write-Host "An unknown error occurred verifying the app registration's presence in the tenant."
         }
-    }
-    catch {
-        Write-Host "An unknown error occurred verifying the app registration's presence in the intended tenant."
     }
 
     # Authenticate to Microsoft Graph using the application ID and previously instantiated credentials.
