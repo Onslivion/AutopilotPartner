@@ -339,7 +339,7 @@ function Import-Autopilot {
         Write-Host "Using tenant $($customer.Name) | $($customer.CustomerId) specified in settings.json."
     }
     else {
-        $customer = (Get-Choice -In $customers -Params "Name","Domain","CustomerId" -PageSize 16).CustomerId
+        $customer = Get-Choice -In $customers -Params "Name","Domain","CustomerId" -PageSize 16
     }
 
     # Attain group tag
@@ -385,7 +385,7 @@ function Import-Autopilot {
 
     # Initiation / Verification of the application registration in the tenant.
     # If an application registration does not exist, one is made using the least privileged permission set.
-    Write-Host "Verifying $($settings.CLIENT_APP_NAME) | $($settings.CLIENT_APP_ID) is an app registration in the client tenant $($customer.Name) | $()"
+    Write-Host "Verifying $($settings.CLIENT_APP_NAME) | $($settings.CLIENT_APP_ID) is an app registration in the client tenant $($customer.Name) | $($customer.CustomerId)"
     $grant = New-Object -TypeName Microsoft.Store.PartnerCenter.Models.ApplicationConsents.ApplicationGrant
     $grant.EnterpriseApplicationId = '00000003-0000-0000-c000-000000000000'
     $grant.Scope = "DeviceManagementManagedDevices.ReadWrite.All,DeviceManagementServiceConfig.ReadWrite.All"
