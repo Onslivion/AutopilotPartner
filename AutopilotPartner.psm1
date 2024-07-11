@@ -392,12 +392,12 @@ function Import-Autopilot {
     try {
         New-PartnerCustomerApplicationConsent -ApplicationGrants @($grant) -CustomerId $customer.CustomerId -ApplicationId $settings.CLIENT_APP_ID -DisplayName $settings.CLIENT_APP_NAME
     }
-    catch [PartnerException] {
+    catch [Microsoft.Store.PartnerCenter.Exceptions.PartnerException] {
         if ($_ -eq ("Permission entry already exists.")) {
             Write-Host "The application registration already exists in the tenant. Proceeding."
         }
         else {
-            Write-Host "An unknown error occurred verifying the app registration's presence in the tenant "
+            Write-Host "An unknown error occurred verifying the app registration's presence in the tenant."
         }
     }
     catch {
