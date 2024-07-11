@@ -298,11 +298,14 @@ function Import-Autopilot {
     
     # Get settings configuration from settings.json
     try {
-        $settings = Get-Content -Path $SettingsPath | ConvertFrom-Json
+        $settings = Get-Content -Path $SettingsPath
     }
     catch {
         Write-Error -Message "Error locating settings.json file. Please be sure that -SettingsPath is correct."
     }
+
+    $settings = $settings -replace '(?m)(?<=^([^"]|"[^"]*")*)//.*' -replace '(?ms)/\*.*?\*/'
+    $settings = ConvertFrom-Json $settings
 
     # Check if required values are present in settings.json
     if (!$settings.PARTNER_APP_ID -or !$settings.CLIENT_APP_ID -or !$settings.CLIENT_APP_NAME) {
