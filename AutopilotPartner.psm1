@@ -72,6 +72,9 @@ function Wait-UntilComplete { # Credit to authors of https://www.powershellgalle
             if ($importCheck.state.deviceImportStatus -eq "unknown") {
                 Write-Progress -Activity "Autopilot Enrollment" -Status "Awaiting device import..." -PercentComplete $percent
                 $percent += 25 / $iter
+                if ($percent -ge 100) {
+                    $percent = 99
+                }
                 $iter++
                 Start-Sleep 10
             }
@@ -112,7 +115,7 @@ function Wait-UntilComplete { # Credit to authors of https://www.powershellgalle
         Write-Host "Devices synced. Elapsed time to complete sync: $syncSeconds seconds"
         
         # Assignment Check
-        $percent = 50
+        $percent = 0
         $iter = 1
         $assignStart = Get-Date
         do {
@@ -121,6 +124,9 @@ function Wait-UntilComplete { # Credit to authors of https://www.powershellgalle
             if (!$assignCheck.deploymentProfileAssignmentStatus.StartsWith("assigned")) {
                 Write-Progress -Activity "Autopilot Enrollment" -Status "Awaiting assignment to a deployment profile... Current Status: $($assignCheck.deploymentProfileAssignmentStatus)" -PercentComplete $percent
                 $percent += 25 / $iter
+                if ($percent -ge 100) {
+                    $percent = 99
+                }
                 $iter++
                 Start-Sleep 30
             }
