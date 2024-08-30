@@ -148,6 +148,8 @@ function Get-Choice {
         [String[]] $Params,
         [Parameter(Mandatory=$false, HelpMessage="Allow selection of multiple values")]
         [switch] $MultipleChoice = $false,
+        [Parameter(Mandatory=$false, HelpMessage="Color the output for better visualization")]
+        [switch] $Color = $true,
         [Parameter(Mandatory=$false, HelpMessage="Page size")]
         [int] $PageSize = 8
     )
@@ -167,7 +169,14 @@ function Get-Choice {
                 else {
                     $outStr += $In[$i]
                 }
-                Write-Host $outStr
+                if ($Color) {
+                    switch ($i % 2) {
+                        0 { $colorStr = "Yellow" }
+                        1 { $colorStr = "Cyan" }
+                    }
+                }
+                else { $colorStr = "White" }
+                Write-Host -ForegroundColor $colorStr $outStr 
             }
 
             $selectStr = "Pick the relevant option. "
