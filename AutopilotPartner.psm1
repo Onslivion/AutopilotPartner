@@ -1,4 +1,4 @@
-function Get-TenantID { # Credit to Daniel Kåven | https://teams.se/powershell-script-find-a-microsoft-365-tenantid/
+ function Get-TenantID { # Credit to Daniel Kåven | https://teams.se/powershell-script-find-a-microsoft-365-tenantid/
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true, Position=0, HelpMessage="The domain name of the tenant")]
@@ -316,6 +316,7 @@ function Import-Autopilot {
     # Check if required values are present in settings.json
     if (!$settings.PARTNER_APP_ID -or !$settings.CLIENT_APP_ID -or !$settings.CLIENT_APP_NAME) {
         Write-Error -Message "One of the following required values is missing from settings.json: PARNTER_APP_ID, CLIENT_APP_ID, CLIENT_APP_NAME"
+        exit 1
     }
 
     # Attempt to authenticate to Partner Center using the provided Partner App ID
@@ -329,23 +330,35 @@ function Import-Autopilot {
     catch {
         Write-Host "There was a problem signing in to Microsoft Partner Center. Verify your access and the status of Partner Center."
         Write-Error -Message $_
+        exit 1
     }
 
     Write-Host "Connected to Partner Center via $((Get-PartnerOrganizationProfile).CompanyName) | $(Get-TenantID $partnerResult.Account.Tenant)."
 
-    $customers = Get-PartnerCustomer
+    try {
+        $customers = Get-PartnerCustomer
+    }
+    catch {
+        Write-Host "There was a problem getting the list of customers from Microsoft Partner Center. Are you sure you're using your Partner credentials?"
+        exit 1
+    }
 
     # Attain tenant via user input or from parameters.
-    if ($PSBoundParameters.ContainsKey("ClientTenant")) {
-        $customer = Get-Tenant $ClientTenant
-        Write-Host "Using tenant $($customer.Name) | $($customer.CustomerId) specified in arguments."
+    try {
+        if ($PSBoundParameters.ContainsKey("ClientTenant")) {
+            $customer = Get-Tenant $ClientTenant
+            Write-Host "Using tenant $($customer.Name) | $($customer.CustomerId) specified in arguments."
+        }
+        elseif ($settings.FORCE_DEF_TENANT) {
+            $customer = Get-Tenant $settings.DEFAULT_TENANT
+            Write-Host "Using tenant $($customer.Name) | $($customer.CustomerId) specified in settings.json."
+        }
+        else {
+            $customer = Get-Choice -In $customers -Params "Name","Domain","CustomerId" -PageSize 16
+        }
     }
-    elseif ($settings.FORCE_DEF_TENANT) {
-        $customer = Get-Tenant $settings.DEFAULT_TENANT
-        Write-Host "Using tenant $($customer.Name) | $($customer.CustomerId) specified in settings.json."
-    }
-    else {
-        $customer = Get-Choice -In $customers -Params "Name","Domain","CustomerId" -PageSize 16
+    catch {
+        exit 1
     }
 
     # Attain group tag
@@ -404,6 +417,7 @@ function Import-Autopilot {
         }
         else {
             Write-Host "An unknown error occurred verifying the app registration's presence in the tenant."
+            exit 1
         }
     }
 
@@ -421,7 +435,14 @@ function Import-Autopilot {
 
     # Initiate enrollment to Autopilot.
     Write-Host "Initiating Autopilot Enrollment..."
+    Write-Host "Connecting to Microsoft Graph..."
     Connect-MgGraph -AccessToken $token
+    if (!(("DeviceManagementManagedDevices.ReadWrite.All" -in $(Get-MgContext).scopes) -and ("DeviceManagementServiceConfig.ReadWrite.All" -in $(Get-MgContext).scopes))) {
+        Write-Host "The application does not have the correct scopes. Please review the enterprise application $($settings.CLIENT_APP_NAME) | $($settings.CLIENT_APP_ID)"
+        Write-Host "Scopes assigned: $($(Get-MgContext).scopes)"
+        exit 1
+    }
+
     Write-Host "Acquiring hardware hash information..."
     $device = Get-HWID
     $importIdentity = Add-AutopilotImportedDevice -serialNumber $device."Device Serial Number" -hardwareIdentifier $device."Hardware Hash" -groupTag $GroupTag -assignedUser $AssignedUser
@@ -448,5 +469,7 @@ function Import-Autopilot {
         Write-Progress -Activity "Awaiting Soak" -SecondsRemaining $($soakSecs - $i) -PercentComplete $($i / $soakSecs)
         Start-Sleep 1
     }
+
+    exit 0
 
 }
