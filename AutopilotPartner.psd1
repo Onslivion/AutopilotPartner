@@ -1,6 +1,6 @@
 @{
     RootModule = 'AutopilotPartner.psm1'
-    ModuleVersion = '1.0.5'
+    ModuleVersion = '1.1.0'
     GUID = 'faa0d447-edd6-4d68-b449-3fc437fb21f9'
     Author = 'Onslivion'
     Description = 'A module designed to import devices to Intune / Autopilot (directly) using Microsoft Partner delegation.'
@@ -16,6 +16,7 @@
             Tags = @('Intune','Autopilot','Windows','PSEdition_Desktop','CSP','Partner')
             ReleaseNotes = 
             @'
+            Version 1.1.0: Added color to customer selection menu and improved error handling/reporting.
             Version 1.0.5: Corrected soak timer and adjusted final progress bar
             Version 1.0.4: Adjusted import progress bar, retweaked PartnerCenter connection exception handling
             Version 1.0.3: fixed some semantics errors and fixed PartnerCenter connection exception handling
