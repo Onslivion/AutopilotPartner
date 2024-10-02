@@ -149,7 +149,7 @@ function Get-Choice {
         [Parameter(Mandatory=$false, HelpMessage="Allow selection of multiple values")]
         [switch] $MultipleChoice = $false,
         [Parameter(Mandatory=$false, HelpMessage="Color the output for better visualization")]
-        [switch] $Color = $true,
+        [bool] $Color = $true,
         [Parameter(Mandatory=$false, HelpMessage="Page size")]
         [int] $PageSize = 8
     )
