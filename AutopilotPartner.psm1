@@ -421,8 +421,8 @@ function Import-Autopilot {
         New-PartnerCustomerApplicationConsent -ApplicationGrants @($grant) -CustomerId $customer.CustomerId -ApplicationId $settings.CLIENT_APP_ID -DisplayName $settings.CLIENT_APP_NAME
     }
     catch {
-        if ($_ -eq ("Permission entry already exists.")) {
-            Write-Host "The application registration already exists in the tenant. Proceeding."
+        if ($_.ErrorDetails.Message -eq ("Permission entry already exists.")) {
+            Write-Host "The application registration already exists in the tenant. Proceeding." -ForegroundColor Yellow
         }
         else {
             Write-Host "An unknown error occurred verifying the app registration's presence in the tenant."
@@ -461,7 +461,7 @@ function Import-Autopilot {
     Write-Host "Disconnecting from Microsoft services..."
     Disconnect-MgGraph
     Disconnect-PartnerCenter
-    
+
     Write-Host "Removing all installed modules..."
     Write-Progress -Activity "Removing installed modules" -Status "Removing PartnerCenter" -PercentComplete 0
     Remove-Module -Name PartnerCenter -Force 
