@@ -458,6 +458,10 @@ function Import-Autopilot {
     Wait-UntilComplete -Device $importIdentity
 
     # Remove tracks. This may not work properly (it is what it is).
+    Write-Host "Disconnecting from Microsoft services..."
+    Disconnect-MgGraph
+    Disconnect-PartnerCenter
+    
     Write-Host "Removing all installed modules..."
     Write-Progress -Activity "Removing installed modules" -Status "Removing PartnerCenter" -PercentComplete 0
     Remove-Module -Name PartnerCenter -Force 
