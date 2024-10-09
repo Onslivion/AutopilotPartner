@@ -273,7 +273,7 @@ function Get-Choice {
     }
 }
 
-function Get-Tenant {
+function Find-Tenant {
     param (
         [Parameter(Mandatory=$true)]
         [String] $ID
@@ -299,6 +299,102 @@ function Get-Tenant {
 
         return $desiredTenant
     }
+}
+
+function Authenticate {
+    # Attempt to authenticate to Partner Center using the provided Partner App ID
+    Write-Host "Initiating interactive sign-in. You will be signing in to Microsoft Partner Center, under the application $($settings.PARTNER_APP_ID)."
+    try {
+        if ($settings.DEVICE_CODE_AUTH) { $partnerToken = New-PartnerAccessToken -ApplicationId $settings.PARTNER_APP_ID -Scopes 'https://api.partnercenter.microsoft.com/user_impersonation' -UseDeviceAuthentication }
+        else { $partnerToken = New-PartnerAccessToken -ApplicationId $settings.PARTNER_APP_ID -Scopes 'https://api.partnercenter.microsoft.com/user_impersonation' -UseAuthorizationCode }
+
+        $partnerResult = Connect-PartnerCenter -AccessToken $partnerToken.AccessToken
+    }
+    catch {
+        Write-Host "There was a problem signing in to Microsoft Partner Center. Verify your access and the status of Partner Center."
+        Write-Error -Message $_
+        exit 1
+    }
+
+    Write-Host "Connected to Partner Center via $((Get-PartnerOrganizationProfile).CompanyName) | $(Get-TenantID $partnerResult.Account.Tenant)."
+
+    if (-not $(Get-PartnerMPNProfile).MpnId) {
+        Write-Host "This does not appear to be a Microsoft Partner Network account." -ForegroundColor Red
+        Write-Host "The device will be added directly to the tenant associated with the signed-in account. Ctrl+C to cancel/terminate." -ForegroundColor Red
+        Start-Sleep 5
+        $isPartner = $false
+    }
+    else {
+        $isPartner = $true
+    }
+
+    if ($isPartner) {
+        try {
+            $customers = Get-PartnerCustomer
+        }
+        catch {
+            Write-Host "There was a problem getting the list of customers from Microsoft Partner Center. Are you sure you're using your Partner credentials?"
+            exit 1
+        }
+
+        # Attain tenant via user input or from parameters.
+        try {
+            if ($PSBoundParameters.ContainsKey("ClientTenant")) {
+                $customer = Find-Tenant $ClientTenant
+                Write-Host "Using tenant $($customer.Name) | $($customer.CustomerId) specified in arguments."
+            }
+            elseif ($settings.FORCE_DEF_TENANT) {
+                $customer = Find-Tenant $settings.DEFAULT_TENANT
+                Write-Host "Using tenant $($customer.Name) | $($customer.CustomerId) specified in settings.json."
+            }
+            else {
+                $customer = Get-Choice -In $customers -Params "Name","Domain","CustomerId" -PageSize 16
+            }
+        }
+        catch {
+            exit 1
+        }
+
+        # Initiation / Verification of the application registration in the tenant.
+        # If an application registration does not exist, one is made using the least privileged permission set.
+        Write-Host "Verifying $($settings.CLIENT_APP_NAME) | $($settings.CLIENT_APP_ID) is an app registration in the client tenant $($customer.Name) | $($customer.CustomerId)"
+        $grant = New-Object -TypeName Microsoft.Store.PartnerCenter.Models.ApplicationConsents.ApplicationGrant
+        $grant.EnterpriseApplicationId = '00000003-0000-0000-c000-000000000000'
+        $grant.Scope = "DeviceManagementManagedDevices.ReadWrite.All,DeviceManagementServiceConfig.ReadWrite.All"
+        try {
+            New-PartnerCustomerApplicationConsent -ApplicationGrants @($grant) -CustomerId $customer.CustomerId -ApplicationId $settings.CLIENT_APP_ID -DisplayName $settings.CLIENT_APP_NAME
+        }
+        catch {
+            if ($_.ErrorDetails.Message -eq ("Permission entry already exists.")) {
+                Write-Host "The application registration already exists in the tenant. Proceeding." -ForegroundColor Yellow
+            }
+            else {
+                Write-Host "An unknown error occurred verifying the app registration's presence in the tenant."
+                exit 1
+            }
+        }
+
+        # Authenticate to Microsoft Graph using the application ID and previously instantiated credentials.
+        Write-Host "Authenticating to tenant $($customer.Name) | $($customer.CustomerId) through Microsoft Partner Network using the app registration $($settings.CLIENT_APP_NAME) | $($settings.CLIENT_APP_ID)"
+        if ($settings.CLIENT_APP_ID -eq $settings.PARTNER_APP_ID) {
+            $authReq = New-PartnerAccessToken -ApplicationId $settings.CLIENT_APP_ID -RefreshToken $partnerToken.RefreshToken -Scopes "https://graph.microsoft.com/.default" -Tenant $customer.CustomerId 
+        }
+        else {
+            Write-Host "The application ID for the partner application is different than the client application. Re-authentication is required."
+            if ($settings.DEVICE_CODE_AUTH) { $authReq = New-PartnerAccessToken -ApplicationId $settings.CLIENT_APP_ID -Scopes "https://graph.microsoft.com/.default" -Tenant $customer.CustomerId -UseDeviceAuthentication }
+            else { $authReq = New-PartnerAccessToken -ApplicationId $settings.CLIENT_APP_ID -Scopes "https://graph.microsoft.com/.default" -Tenant $customer.CustomerId -UseAuthorizationCode }
+        }
+    
+    }
+
+    else {
+        if ($settings.DEVICE_CODE_AUTH) { $authReq = New-PartnerAccessToken -ApplicationId $settings.CLIENT_APP_ID -Scopes "https://graph.microsoft.com/.default" -Tenant Get-TenantID $partnerResult.Account.Tenant -UseDeviceAuthentication }
+        else { $authReq = New-PartnerAccessToken -ApplicationId $settings.CLIENT_APP_ID -Scopes "https://graph.microsoft.com/.default" -Tenant $customer.CustomerId -UseAuthorizationCode }
+    }
+
+    $token = ConvertTo-SecureString -Force -AsPlainText $authReq.AccessToken
+
+    return $token
 }
 
 function Import-Autopilot {
@@ -355,11 +451,11 @@ function Import-Autopilot {
     # Attain tenant via user input or from parameters.
     try {
         if ($PSBoundParameters.ContainsKey("ClientTenant")) {
-            $customer = Get-Tenant $ClientTenant
+            $customer = Find-Tenant $ClientTenant
             Write-Host "Using tenant $($customer.Name) | $($customer.CustomerId) specified in arguments."
         }
         elseif ($settings.FORCE_DEF_TENANT) {
-            $customer = Get-Tenant $settings.DEFAULT_TENANT
+            $customer = Find-Tenant $settings.DEFAULT_TENANT
             Write-Host "Using tenant $($customer.Name) | $($customer.CustomerId) specified in settings.json."
         }
         else {
