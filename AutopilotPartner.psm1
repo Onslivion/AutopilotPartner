@@ -389,7 +389,7 @@ function Authenticate {
 
     else {
         if ($settings.DEVICE_CODE_AUTH) { $authReq = New-PartnerAccessToken -ApplicationId $settings.CLIENT_APP_ID -Scopes "https://graph.microsoft.com/.default" -Tenant Get-TenantID $partnerResult.Account.Tenant -UseDeviceAuthentication }
-        else { $authReq = New-PartnerAccessToken -ApplicationId $settings.CLIENT_APP_ID -Scopes "https://graph.microsoft.com/.default" -Tenant $customer.CustomerId -UseAuthorizationCode }
+        else { $authReq = New-PartnerAccessToken -ApplicationId $settings.CLIENT_APP_ID -Scopes "https://graph.microsoft.com/.default" -Tenant $partnerResult.Account.Tenant -UseAuthorizationCode }
     }
 
     $token = ConvertTo-SecureString -Force -AsPlainText $authReq.AccessToken
