@@ -575,7 +575,7 @@ function Import-Autopilot {
     else { $soakSecs = $settings.SOAK_TIME }
 
     for ($i = 0; $i -le $soakSecs; $i++) {
-        Write-Progress -Activity "Awaiting Soak" -SecondsRemaining $($soakSecs - $i) -PercentComplete $($i / $soakSecs)
+        Write-Progress -Activity "Awaiting Soak" -SecondsRemaining $($soakSecs - $i) -PercentComplete $(($i / $soakSecs) * 100)
         Start-Sleep 1
     }
 
