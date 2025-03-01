@@ -98,6 +98,15 @@ function Wait-UntilComplete { # Credit to authors of https://www.powershellgalle
         Write-Host "Device imported successfully. Elapsed time to complete import: $importSeconds seconds"
         
         # Sync Check
+        Write-Host "Verifying successful import..."
+        try {
+            Get-AutopilotDevice -id $importCheck.state.deviceRegistrationId
+        }
+        catch {
+            Write-Error -Message $("The device import failed. Error: " + $_)
+            return
+        }
+
         $syncStart = Get-Date
         do {
             $processed = $false
