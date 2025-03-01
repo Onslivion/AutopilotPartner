@@ -337,6 +337,13 @@ function Authenticate {
             exit 1
         }
 
+        # Include Partner tenant as an option.
+        $self = New-Object -TypeName "Microsoft.Store.PartnerCenter.PowerShell.Models.Customers.PSCustomer"
+        $self.Domain = $(Get-PartnerOrganizationProfile).Domain
+        $self.CustomerId = $(Get-PartnerOrganizationProfile).Id
+        $self.Name = $(Get-PartnerOrganizationProfile).CompanyName
+        $customers += $self
+
         # Attain tenant via user input or from parameters.
         try {
             if ($PSBoundParameters.ContainsKey("ClientTenant")) {
