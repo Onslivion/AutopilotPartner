@@ -477,28 +477,24 @@ function Import-Autopilot {
     Invoke-Authentication -Settings $settings -RequiredGraphPermissions @("DeviceManagementServiceConfig.ReadWrite.All")
 
     # Attain group tag
-    if ($PSBoundParameters.ContainsKey("GroupTag")) {
-        Write-Host "Using group tag $($GroupTag) as specified in arguments."
+    if (!$($null -eq $settings.DEFAULT_GROUP_TAG)) {
+        Write-Host "Setting the group tag $($settings.DEFAULT_GROUP_TAG) as specified in the settings file."
     }
     else {
-        if (!$($null -eq $settings.DEFAULT_GROUP_TAG)) {
-            Write-Host "Setting the group tag $($settings.DEFAULT_GROUP_TAG) as specified in the settings file."
-        }
-        else {
-            do {
-                $GroupTag = Read-Host -Prompt "Enter the group tag of the device (Default: '$($settings.DEFAULT_GROUP_TAG)')"
-                if (!$GroupTag) {
-                    $GroupTag = $DEFAULT_GROUP_TAG
-                    break
-                }
-                else {
-                    do {
-                        $Confirmation = Read-Host -Prompt "Group Tag: '$($GroupTag)' | Correct? (y/N)"
-                    } while (!(($Confirmation.ToLower() -eq "y" ) -or ($Confirmation.ToLower() -eq "n") -or (!$Confirmation)))
-                }
-            } while ($Confirmation.ToLower() -ne "y")
-        }
+        do {
+            $GroupTag = Read-Host -Prompt "Enter the group tag of the device"
+            if (!$GroupTag) {
+                $GroupTag = $DEFAULT_GROUP_TAG
+                break
+            }
+            else {
+                do {
+                    $Confirmation = Read-Host -Prompt "Group Tag: '$($GroupTag)' | Correct? (y/N)"
+                } while (!(($Confirmation.ToLower() -eq "y" ) -or ($Confirmation.ToLower() -eq "n") -or (!$Confirmation)))
+            }
+        } while ($Confirmation.ToLower() -ne "y")
     }
+
 
     # Attain user information if ENABLE_ASSIGN_USER is true.
     if ($settings.ENABLE_ASSIGN_USER) {
