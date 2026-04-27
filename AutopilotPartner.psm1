@@ -373,16 +373,13 @@ function Invoke-Authentication {
             domain = $partnerTenant.DefaultDomain
         }
 
-        if ($settings.DEFAULT_TENANT) { # TODO: Update to correct conditional
-            if ($customers | Where-Object tenantId -eq $settings.DEFAULT_TENANT) {
-
-            }
-            else { 
-                Write-Error "Tenant specified is not found in the list of customers from Partner Center." -ErrorAction Stop
-            }
+        if (!$($null -eq$settings.DEFAULT_TENANT)) {
+            $TargetTenant = $($customers | Where-Object tenantId -eq $(Get-TenantID $settings.DEFAULT_TENANT)).tenantId
+            if ($TargetTenant) { }
+            else               { Write-Error "Tenant specified is not found in the list of customers from Partner Center." -ErrorAction Stop}
         }
         else {
-            $TargetTenant = Get-Choice -In $customers -Params @("tenantId", "domain","companyName") -PageSize 16
+            $TargetTenant = $(Get-Choice -In $customers -Params @("tenantId", "domain","companyName") -PageSize 16).tenantId
         }
     }
     else {
