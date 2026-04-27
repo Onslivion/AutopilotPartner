@@ -382,7 +382,7 @@ function Invoke-Authentication {
             }
         }
         else {
-            $TargetTenant = Get-Choice -In $customers -Params @("tenantId", "domain","companyName") -PageSize 16 -
+            $TargetTenant = Get-Choice -In $customers -Params @("tenantId", "domain","companyName") -PageSize 16
         }
     }
     else {
