@@ -336,12 +336,18 @@ function Invoke-Authentication {
 
     }
 
+    $AzParams = @{}
+
+    if ($settings.DEVICE_CODE_AUTH) {
+        $AzParams.UseDeviceAuthentication = $true
+    }
+
     # Authenticate to Azure Portal
     $AzConfig = Get-AzConfig
     Update-AzConfig -LoginExperienceV2 Off
     Write-Host "Connecting to Azure - this will determine if your tenant is in the Microsoft Partner Network (MPN)"
     Disconnect-AzAccount -ErrorAction SilentlyContinue | Out-Null
-    Connect-AzAccount | Out-Null
+    Connect-AzAccount @AzParams | Out-Null
 
     # Get a Partner Center token
     $PartnerToken = Get-AzAccessToken -ResourceUrl "https://api.partnercenter.microsoft.com" 
