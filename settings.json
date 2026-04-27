@@ -11,17 +11,16 @@
     "DEVICE_CODE_AUTH": true,
 
     // Use the following to set a default group tag.
-    // Setting FORCE_DEF_GROUP_TAG to true will force the group tag specified
-    // and bypass user input.
-    "DEFAULT_GROUP_TAG": "",
-    "FORCE_DEF_GROUP_TAG": true,
+    // Setting a null value will require that the user specify a group tag interactively.
+    // Setting it to an empty string will not set a group tag (and does not require interactivity).
+    // NOTE: The FORCE_DEF_GROUP_TAG setting is deprecated.
+    "DEFAULT_GROUP_TAG": null,
 
     // Use the following to set a default client tenant.
     // You can specify a tenant ID or a domain belonging to the tenant
-    // Setting FORCE_DEF_TENANT to true will force the tenant specified
-    // and bypass user input.
-    "DEFAULT_TENANT": "",
-    "FORCE_DEF_TENANT": false,
+    // Setting a null value will require the user to specify a tenant interactively (only if the user is a Partner).
+    // NOTE: The FORCE_DEF_TENANT setting is deprecated.
+    "DEFAULT_TENANT": null,
 
 
     // Enable the ability to assign users.
