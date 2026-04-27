@@ -450,6 +450,7 @@ function Import-Autopilot {
     $settings = $settings -replace '(?m)(?<=^([^"]|"[^"]*")*)//.*' -replace '(?ms)/\*.*?\*/'
     $settings = $settings | ConvertFrom-Json
 
+
     if (!$settings) {
         $settings = @{
                 DEVICE_CODE_AUTH = $true
