@@ -1,7 +1,7 @@
 Import-Module Az.Accounts 
 
-
 $AZURE_CLI_APP_ID = "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
+
  function Get-TenantID { # Credit to Daniel Kåven | https://teams.se/powershell-script-find-a-microsoft-365-tenantid/
     [CmdletBinding()]
     param (
@@ -430,7 +430,7 @@ function Invoke-Authentication {
 function Import-Autopilot {
     param (
         [Parameter(Mandatory=$false)]
-        [String] $SettingsPath = '.\settings.json',
+        [String] $SettingsPath,
         [Parameter(Mandatory=$false)]
         [String] $GroupTag,
         [Parameter(Mandatory=$false)]
@@ -438,63 +438,32 @@ function Import-Autopilot {
     )
     
     # Get settings configuration from settings.json
-    try {
-        $settings = Get-Content -Path $SettingsPath
+    if ($SettingsPath) {
+        try   { $settings = Get-ContentPath -Path $SettingsPath }
+        catch { Write-Error -Message "Specified settings file was not found." -ErrorAction Stop }
     }
-    catch {
-        Write-Error -Message "Error locating settings.json file. Please be sure that -SettingsPath is correct."
+    else {
+        try     { $settings = Get-ContentPath -Path "./settings.json" }
+        catch   { Write-Verbose "No settings.json found in current directory. Moving with default settings." }
     }
-
+    
     $settings = $settings -replace '(?m)(?<=^([^"]|"[^"]*")*)//.*' -replace '(?ms)/\*.*?\*/'
     $settings = $settings | ConvertFrom-Json
 
-    # Check if required values are present in settings.json
-    if (!$settings.PARTNER_APP_ID -or !$settings.CLIENT_APP_ID -or !$settings.CLIENT_APP_NAME) {
-        Write-Error -Message "One of the following required values is missing from settings.json: PARNTER_APP_ID, CLIENT_APP_ID, CLIENT_APP_NAME"
-        exit 1
+    if (!$settings) {
+        $settings = @{
+                DEVICE_CODE_AUTH = $true
+                DEFAULT_GROUP_TAG = ""
+                FORCE_DEF_GROUP_TAG = $false
+                DEFAULT_TENANT = ""
+                FORCE_DEF_TENANT = $false
+                ENABLE_ASSIGN_USER = $false
+                SOAK_TIME = 300
+            }
     }
 
-    # Attempt to authenticate to Partner Center using the provided Partner App ID
-    Write-Host "Initiating interactive sign-in. You will be signing in to Microsoft Partner Center, under the application $($settings.PARTNER_APP_ID)."
-    try {
-        if ($settings.DEVICE_CODE_AUTH) { $partnerToken = New-PartnerAccessToken -ApplicationId $settings.PARTNER_APP_ID -Scopes 'https://api.partnercenter.microsoft.com/user_impersonation' -UseDeviceAuthentication }
-        else { $partnerToken = New-PartnerAccessToken -ApplicationId $settings.PARTNER_APP_ID -Scopes 'https://api.partnercenter.microsoft.com/user_impersonation' -UseAuthorizationCode }
-
-        $partnerResult = Connect-PartnerCenter -AccessToken $partnerToken.AccessToken
-    }
-    catch {
-        Write-Host "There was a problem signing in to Microsoft Partner Center. Verify your access and the status of Partner Center."
-        Write-Error -Message $_
-        exit 1
-    }
-
-    Write-Host "Connected to Partner Center via $((Get-PartnerOrganizationProfile).CompanyName) | $(Get-TenantID $partnerResult.Account.Tenant)."
-
-    try {
-        $customers = Get-PartnerCustomer
-    }
-    catch {
-        Write-Host "There was a problem getting the list of customers from Microsoft Partner Center. Are you sure you're using your Partner credentials?"
-        exit 1
-    }
-
-    # Attain tenant via user input or from parameters.
-    try {
-        if ($PSBoundParameters.ContainsKey("ClientTenant")) {
-            $customer = Find-Tenant $ClientTenant
-            Write-Host "Using tenant $($customer.Name) | $($customer.CustomerId) specified in arguments."
-        }
-        elseif ($settings.FORCE_DEF_TENANT) {
-            $customer = Find-Tenant $settings.DEFAULT_TENANT
-            Write-Host "Using tenant $($customer.Name) | $($customer.CustomerId) specified in settings.json."
-        }
-        else {
-            $customer = Get-Choice -In $customers -Params "Name","Domain","CustomerId" -PageSize 16
-        }
-    }
-    catch {
-        exit 1
-    }
+    # Authenticate to Microsoft Graph using the application ID and previously instantiated credentials.
+    Invoke-Authentication -Settings $settings -RequiredGraphPermissions @("DeviceManagementServiceConfig.ReadWrite.All")
 
     # Attain group tag
     if ($PSBoundParameters.ContainsKey("GroupTag")) {
@@ -535,47 +504,6 @@ function Import-Autopilot {
     }
     else {
         Write-Host "User assignment disabled - skipping user assignment"
-    }
-
-    # Initiation / Verification of the application registration in the tenant.
-    # If an application registration does not exist, one is made using the least privileged permission set.
-    Write-Host "Verifying $($settings.CLIENT_APP_NAME) | $($settings.CLIENT_APP_ID) is an app registration in the client tenant $($customer.Name) | $($customer.CustomerId)"
-    $grant = New-Object -TypeName Microsoft.Store.PartnerCenter.Models.ApplicationConsents.ApplicationGrant
-    $grant.EnterpriseApplicationId = '00000003-0000-0000-c000-000000000000'
-    $grant.Scope = "DeviceManagementManagedDevices.ReadWrite.All,DeviceManagementServiceConfig.ReadWrite.All"
-    try {
-        New-PartnerCustomerApplicationConsent -ApplicationGrants @($grant) -CustomerId $customer.CustomerId -ApplicationId $settings.CLIENT_APP_ID -DisplayName $settings.CLIENT_APP_NAME
-    }
-    catch {
-        if ($_.ErrorDetails.Message -eq ("Permission entry already exists.")) {
-            Write-Host "The application registration already exists in the tenant. Proceeding." -ForegroundColor Yellow
-        }
-        else {
-            Write-Host "An unknown error occurred verifying the app registration's presence in the tenant."
-            exit 1
-        }
-    }
-
-    # Authenticate to Microsoft Graph using the application ID and previously instantiated credentials.
-    Write-Host "Authenticating to tenant $($customer.Name) | $($customer.CustomerId) through Microsoft Partner Network using the app registration $($settings.CLIENT_APP_NAME) | $($settings.CLIENT_APP_ID)"
-    if ($settings.CLIENT_APP_ID -eq $settings.PARTNER_APP_ID) {
-        $authReq = New-PartnerAccessToken -ApplicationId $settings.CLIENT_APP_ID -RefreshToken $partnerToken.RefreshToken -Scopes "https://graph.microsoft.com/.default" -Tenant $customer.CustomerId 
-    }
-    else {
-        Write-Host "The application ID for the partner application is different than the client application. Re-authentication is required."
-        if ($settings.DEVICE_CODE_AUTH) { $authReq = New-PartnerAccessToken -ApplicationId $settings.CLIENT_APP_ID -Scopes "https://graph.microsoft.com/.default" -Tenant $customer.CustomerId -UseDeviceAuthentication }
-        else { $authReq = New-PartnerAccessToken -ApplicationId $settings.CLIENT_APP_ID -Scopes "https://graph.microsoft.com/.default" -Tenant $customer.CustomerId -UseAuthorizationCode }
-    }
-    $token = ConvertTo-SecureString -Force -AsPlainText $authReq.AccessToken
-
-    # Initiate enrollment to Autopilot.
-    Write-Host "Initiating Autopilot Enrollment..."
-    Write-Host "Connecting to Microsoft Graph..."
-    Connect-MgGraph -AccessToken $token
-    if (!(("DeviceManagementManagedDevices.ReadWrite.All" -in $(Get-MgContext).scopes) -and ("DeviceManagementServiceConfig.ReadWrite.All" -in $(Get-MgContext).scopes))) {
-        Write-Host "The application does not have the correct scopes. Please review the enterprise application $($settings.CLIENT_APP_NAME) | $($settings.CLIENT_APP_ID)"
-        Write-Host "Scopes assigned: $($(Get-MgContext).scopes)"
-        exit 1
     }
 
     Write-Host "Acquiring hardware hash information..."
