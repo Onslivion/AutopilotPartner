@@ -1,3 +1,7 @@
+Import-Module Az.Accounts 
+
+
+$AZURE_CLI_APP_ID = "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
  function Get-TenantID { # Credit to Daniel Kåven | https://teams.se/powershell-script-find-a-microsoft-365-tenantid/
     [CmdletBinding()]
     param (
@@ -311,6 +315,117 @@ function Find-Tenant {
     }
 }
 
+function Invoke-Authentication {
+    param(
+        [Hashtable]$Settings,
+        [String[]]$RequiredGraphPermissions
+    )
+
+    function Invoke-PartnerRestMethod {
+        param(
+            [String]$Method,
+            [SecureString]$Token,
+            [String]$Uri
+        )
+
+        $PARTNER_BASE_URL = "https://api.partnercenter.microsoft.com/v1"
+
+        $req = Invoke-RestMethod -Method $Method -Uri "$($PARTNER_BASE_URL)$($Uri)" -Authentication Bearer -Token $Token
+
+        return $req
+
+    }
+
+    # Authenticate to Azure Portal
+    $AzConfig = Get-AzConfig
+    Update-AzConfig -LoginExperienceV2 Off
+    Write-Host "Connecting to Azure - this will determine if your tenant is in the Microsoft Partner Network (MPN)"
+    Disconnect-AzAccount -ErrorAction SilentlyContinue | Out-Null
+    Connect-AzAccount | Out-Null
+
+    # Get a Partner Center token
+    $PartnerToken = Get-AzAccessToken -ResourceUrl "https://api.partnercenter.microsoft.com" 
+
+    # Verify Partner Status
+    if (!$(Get-PartnerRestMethod -Method "GET" -Uri "/profiles/mpn" -Token $partnerToken.Token).mpnId) {
+        Write-Host "This does not appear to be a Microsoft Partner Network account." -ForegroundColor Red
+        Write-Host "The device will be added directly to the tenant associated with the signed-in account. Ctrl+C to cancel/terminate." -ForegroundColor Red
+        Start-Sleep 5
+        $isPartner = $false
+    }
+
+    # Get target tenant ID for enrollment
+    if ($isPartner) {
+        # Get a list of all customers
+        $customers = $(Invoke-PartnerRestMethod -Method "GET" -Uri "/customers" -Token $partnerToken.Token).items.CompanyProfiles
+
+        # Append partner tenant to list
+        $PartnerTenant = Get-AzTenant | Where-Object Id -eq $(Get-AzContext).Tenant
+        $customers += [PSCustomObject]@{
+            tenantId = $partnerTenant.Id
+            companyName = $partnerTenant.Name
+            domain = $partnerTenant.DefaultDomain
+        }
+
+        if ($settings.DEFAULT_TENANT) { # TODO: Update to correct conditional
+            if ($customers | Where-Object tenantId -eq $settings.DEFAULT_TENANT) {
+
+            }
+            else { 
+                Write-Error "Tenant specified is not found in the list of customers from Partner Center." -ErrorAction Stop
+            }
+        }
+        else {
+            $TargetTenant = Get-Choice -In $customers -Params @("tenantId", "domain","companyName") -PageSize 16 -
+        }
+    }
+    else {
+        $TargetTenant = $(Get-AzContext).Tenant
+    }
+
+    # Connect to Microsoft Graph in target tenant
+    Write-Host "Connecting to target tenant via Microsoft Graph..."
+    Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+    Connect-MgGraph -AccessToken $(Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $TargetTenant).Token
+
+    # Verify presence of application in tenant
+    Write-Host "Getting service principal of Azure CLI..."
+    $EntApp = Get-MgServicePrincipal -All | Where-Object Id -eq $AZURE_CLI_APP_ID
+
+    # Verify admin consent of application
+    Write-Host "Verifying that Azure CLI has the correct scopes..."
+    $permissions = $(Get-MgOauth2PermissionGrant -Filter "clientId eq $($EntApp.Id)" -All) `
+        | Where-Object ResourceId -eq "00000003-0000-0000-c000-000000000000"
+        | Where-Object ConsentType -eq AllPrincipals
+    if (!($RequiredPermissions -in $permissions.Scope)) {
+        Write-Host -ForegroundColor Red "Application consents not found."
+        Write-Host -ForgroundColor Yellow "Attempting to consent to application..."
+        Write-Host -ForegroundColor Cyan "NOTE: This requires Cloud Application Administrator, Application Administrator, or Global Administrator."
+        try {
+            foreach ($perm in $RequiredPermissions) {
+                $params = @{
+                    clientId = $EntApp.Id
+                    consentType = "AllPrincipals"
+                    resourceId = "00000003-0000-0000-c000-000000000000"
+                    scope = $perm
+                }
+                New-MgOauth2PermissionGrant -BodyParameter $params
+            }
+        }
+        catch {
+            Write-Error "Unable to add consents to Azure CLI in target tenant. InnerError: $($_.Exception.Message)" -ErrorAction Stop
+        }
+
+        # Reauthenticate to attain permissions
+        Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+        Connect-MgGraph -AccessToken $(Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $TargetTenant).Token
+
+    }
+
+    Write-Host -ForegroundColor Green "Checks complete - authenticated to target tenant."
+    Set-AzConfig -LoginExperienceV2 $($AzConfig | Where-Object Key -eq LoginExperienceV2).Value
+    
+}
 function Authenticate {
     # Attempt to authenticate to Partner Center using the provided Partner App ID
     Write-Host "Initiating interactive sign-in. You will be signing in to Microsoft Partner Center, under the application $($settings.PARTNER_APP_ID)."
