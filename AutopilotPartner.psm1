@@ -437,7 +437,11 @@ function Import-Autopilot {
         [Parameter(Mandatory=$false)]
         [String] $GroupTag,
         [Parameter(Mandatory=$false)]
-        [String] $ClientTenant
+        [String] $Tenant,
+        [Parameter(Mandatory=$false)]
+        [Switch] $DeviceCodeAuth,
+        [Parameter(Mandatory=$false)]
+        [Switch] $EnableAssignUser
     )
     
     # Get settings configuration from settings.json
