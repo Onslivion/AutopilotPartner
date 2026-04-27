@@ -457,14 +457,17 @@ function Import-Autopilot {
     if (!$settings) {
         $settings = @{
                 DEVICE_CODE_AUTH = $true
-                DEFAULT_GROUP_TAG = ""
-                FORCE_DEF_GROUP_TAG = $false
-                DEFAULT_TENANT = ""
-                FORCE_DEF_TENANT = $false
+                DEFAULT_GROUP_TAG = $null
+                DEFAULT_TENANT = $null
                 ENABLE_ASSIGN_USER = $false
                 SOAK_TIME = 300
             }
     }
+    
+    if ($GroupTag)                                           { $settings.DEFAULT_GROUP_TAG  = $GroupTag }
+    if ($Tenant)                                             { $settings.DEFAULT_TENANT     = $Tenant }
+    if ($PSBoundParameters.ContainsKey("DeviceCodeAuth"))    { $settings.DEVICE_CODE_AUTH   = $DeviceCodeAuth }
+    if ($PSBoundParameters.ContainsKey("EnableAssignUser"))  { $settings.ENABLE_ASSIGN_USER = $EnableAssignUser }
 
     # Authenticate to Microsoft Graph using the application ID and previously instantiated credentials.
     Invoke-Authentication -Settings $settings -RequiredGraphPermissions @("DeviceManagementServiceConfig.ReadWrite.All")
@@ -473,23 +476,24 @@ function Import-Autopilot {
     if ($PSBoundParameters.ContainsKey("GroupTag")) {
         Write-Host "Using group tag $($GroupTag) as specified in arguments."
     }
-    elseif ($settings.FORCE_DEF_GROUP_TAG) {
-        $GroupTag = $settings.DEFAULT_GROUP_TAG
-        Write-Host "Using group tag '$($settings.DEFAULT_GROUP_TAG) as specified in settings.json"
-    }
     else {
-        do {
-            $GroupTag = Read-Host -Prompt "Enter the group tag of the device (Default: '$($settings.DEFAULT_GROUP_TAG)')"
-            if (!$GroupTag) {
-                $GroupTag = $DEFAULT_GROUP_TAG
-                break
-            }
-            else {
-                do {
-                    $Confirmation = Read-Host -Prompt "Group Tag: '$($GroupTag)' | Correct? (y/N)"
-                } while (!(($Confirmation.ToLower() -eq "y" ) -or ($Confirmation.ToLower() -eq "n") -or (!$Confirmation)))
-            }
-        } while ($Confirmation.ToLower() -ne "y")
+        if (!$($null -eq $settings.DEFAULT_GROUP_TAG)) {
+            Write-Host "Setting the group tag $($settings.DEFAULT_GROUP_TAG) as specified in the settings file."
+        }
+        else {
+            do {
+                $GroupTag = Read-Host -Prompt "Enter the group tag of the device (Default: '$($settings.DEFAULT_GROUP_TAG)')"
+                if (!$GroupTag) {
+                    $GroupTag = $DEFAULT_GROUP_TAG
+                    break
+                }
+                else {
+                    do {
+                        $Confirmation = Read-Host -Prompt "Group Tag: '$($GroupTag)' | Correct? (y/N)"
+                    } while (!(($Confirmation.ToLower() -eq "y" ) -or ($Confirmation.ToLower() -eq "n") -or (!$Confirmation)))
+                }
+            } while ($Confirmation.ToLower() -ne "y")
+        }
     }
 
     # Attain user information if ENABLE_ASSIGN_USER is true.
