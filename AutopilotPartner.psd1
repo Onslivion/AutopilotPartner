@@ -1,13 +1,16 @@
 @{
     RootModule = 'AutopilotPartner.psm1'
-    ModuleVersion = '1.1.1'
+    ModuleVersion = '2.0.0'
     GUID = 'faa0d447-edd6-4d68-b449-3fc437fb21f9'
     Author = 'Onslivion'
     Description = 'A module designed to import devices to Intune / Autopilot (directly) using Microsoft Partner delegation.'
     FunctionsToExport = @('Import-Autopilot')
     RequiredModules = @(
-        'WindowsAutoPilotIntune',
-        'PartnerCenter'
+        'Az.Accounts',
+        'Microsoft.Graph.Authentication',
+        'Microsoft.Graph.Applications',
+        'Microsoft.Graph.Identity.Signins',
+        'WindowsAutoPilotIntune'
     )
 
     PrivateData = @{
@@ -16,6 +19,7 @@
             Tags = @('Intune','Autopilot','Windows','PSEdition_Desktop','CSP','Partner')
             ReleaseNotes = 
             @'
+            Version 2.0.0: Replaced PartnerCenter module, simplified settings, removed custom app registration usage.
             Version 1.1.1: Improved error handling.
             Version 1.1.0: Added color to customer selection menu and improved error handling/reporting.
             Version 1.0.5: Corrected soak timer and adjusted final progress bar
