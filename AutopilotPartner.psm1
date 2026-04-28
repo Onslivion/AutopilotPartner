@@ -397,7 +397,7 @@ function Invoke-Authentication {
     # Verify admin consent of application
     Write-Host "Verifying that Azure CLI has the correct scopes..."
     $permissions = $(Get-MgOauth2PermissionGrant -Filter "clientId eq $($EntApp.Id)" -All) `
-        | Where-Object ResourceId -eq "00000003-0000-0000-c000-000000000000"
+        | Where-Object ResourceId -eq "00000003-0000-0000-c000-000000000000" `
         | Where-Object ConsentType -eq AllPrincipals
     if (!($RequiredPermissions -in $permissions.Scope)) {
         Write-Host -ForegroundColor Red "Application consents not found."
