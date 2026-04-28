@@ -327,9 +327,12 @@ function Invoke-Authentication {
             [String]$Uri
         )
 
+        $headers = @{
+            Authorization = "Bearer $([System.Net.NetworkCredential]::new('', $Token).Password)"
+        }
         $PARTNER_BASE_URL = "https://api.partnercenter.microsoft.com/v1"
 
-        $req = Invoke-RestMethod -Method $Method -Uri "$($PARTNER_BASE_URL)$($Uri)" -Authentication Bearer -Token $Token
+        $req = Invoke-RestMethod -Method $Method -Uri "$($PARTNER_BASE_URL)$($Uri)" -Headers $headers
 
         return $req
 
