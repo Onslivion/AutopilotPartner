@@ -1,6 +1,4 @@
 
-$AZURE_CLI_APP_ID = "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
-
  function Get-TenantID { # Credit to Daniel Kåven | https://teams.se/powershell-script-find-a-microsoft-365-tenantid/
     [CmdletBinding()]
     param (
@@ -316,9 +314,11 @@ function Find-Tenant {
 
 function Invoke-Authentication {
     param(
-        [Hashtable]$Settings,
+        [PSObject]$Settings,
         [String[]]$RequiredGraphPermissions
     )
+
+    $AZURE_CLI_APP_ID = "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
 
     function Invoke-PartnerRestMethod {
         param(
@@ -356,12 +356,13 @@ function Invoke-Authentication {
     $PartnerToken = Get-AzAccessToken -ResourceUrl "https://api.partnercenter.microsoft.com" 
 
     # Verify Partner Status
-    if (!$(Invoke-PartnerRestMethod -Method "GET" -Uri "/profiles/mpn" -Token $partnerToken.Token).mpnId) {
+    if (!$($(Invoke-PartnerRestMethod -Method "GET" -Uri "/profiles/mpn" -Token $partnerToken.Token).substring(1) | ConvertFrom-Json).mpnId) {
         Write-Host "This does not appear to be a Microsoft Partner Network account." -ForegroundColor Red
         Write-Host "The device will be added directly to the tenant associated with the signed-in account. Ctrl+C to cancel/terminate." -ForegroundColor Red
         Start-Sleep 5
         $isPartner = $false
     }
+    else { $isPartner = $true }
 
     # Get target tenant ID for enrollment
     if ($isPartner) {
@@ -376,7 +377,7 @@ function Invoke-Authentication {
             domain = $partnerTenant.DefaultDomain
         }
 
-        if (!$($null -eq$settings.DEFAULT_TENANT)) {
+        if (!$($null -eq $settings.DEFAULT_TENANT)) {
             $TargetTenant = $($customers | Where-Object tenantId -eq $(Get-TenantID $settings.DEFAULT_TENANT)).tenantId
             if ($TargetTenant) { }
             else               { Write-Error "Tenant specified is not found in the list of customers from Partner Center." -ErrorAction Stop}
@@ -386,7 +387,7 @@ function Invoke-Authentication {
         }
     }
     else {
-        $TargetTenant = $(Get-AzContext).Tenant
+        $TargetTenant = $(Get-AzContext).Tenant.Id
     }
 
     # Connect to Microsoft Graph in target tenant
