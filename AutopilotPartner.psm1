@@ -344,6 +344,7 @@ function Invoke-Authentication {
     # Authenticate to Azure Portal
     $AzConfig = Get-AzConfig
     Update-AzConfig -LoginExperienceV2 Off
+    Update-AzConfig -EnableLoginByWam $false
     Write-Host "Connecting to Azure - this will determine if your tenant is in the Microsoft Partner Network (MPN)"
     Disconnect-AzAccount -ErrorAction SilentlyContinue | Out-Null
     Connect-AzAccount @AzParams | Out-Null
@@ -425,7 +426,8 @@ function Invoke-Authentication {
     }
 
     Write-Host -ForegroundColor Green "Checks complete - authenticated to target tenant."
-    Set-AzConfig -LoginExperienceV2 $($AzConfig | Where-Object Key -eq LoginExperienceV2).Value
+    Set-AzConfig -LoginExperienceV2 $($AzConfig | Where-Object Key -eq LoginExperienceV2).Value | Out-Null
+    Set-AzConfig -EnableLoginByWam $($AzConfig | Where-Object Key -eq EnableLoginByWam).Value
     
 }
 
