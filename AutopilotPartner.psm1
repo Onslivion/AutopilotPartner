@@ -343,8 +343,8 @@ function Invoke-Authentication {
 
     # Authenticate to Azure Portal
     $AzConfig = Get-AzConfig
-    Update-AzConfig -LoginExperienceV2 Off
-    Update-AzConfig -EnableLoginByWam $false
+    Update-AzConfig -LoginExperienceV2 Off | Out-Null
+    Update-AzConfig -EnableLoginByWam $false | Out-Null
     Write-Host "Connecting to Azure - this will determine if your tenant is in the Microsoft Partner Network (MPN)"
     Disconnect-AzAccount -ErrorAction SilentlyContinue | Out-Null
     Connect-AzAccount @AzParams | Out-Null
@@ -353,7 +353,7 @@ function Invoke-Authentication {
     $PartnerToken = Get-AzAccessToken -ResourceUrl "https://api.partnercenter.microsoft.com" 
 
     # Verify Partner Status
-    if (!$(Get-PartnerRestMethod -Method "GET" -Uri "/profiles/mpn" -Token $partnerToken.Token).mpnId) {
+    if (!$(Invoke-PartnerRestMethod -Method "GET" -Uri "/profiles/mpn" -Token $partnerToken.Token).mpnId) {
         Write-Host "This does not appear to be a Microsoft Partner Network account." -ForegroundColor Red
         Write-Host "The device will be added directly to the tenant associated with the signed-in account. Ctrl+C to cancel/terminate." -ForegroundColor Red
         Start-Sleep 5
@@ -427,7 +427,7 @@ function Invoke-Authentication {
 
     Write-Host -ForegroundColor Green "Checks complete - authenticated to target tenant."
     Set-AzConfig -LoginExperienceV2 $($AzConfig | Where-Object Key -eq LoginExperienceV2).Value | Out-Null
-    Set-AzConfig -EnableLoginByWam $($AzConfig | Where-Object Key -eq EnableLoginByWam).Value
+    Set-AzConfig -EnableLoginByWam $($AzConfig | Where-Object Key -eq EnableLoginByWam).Value | Out-Null
     
 }
 
