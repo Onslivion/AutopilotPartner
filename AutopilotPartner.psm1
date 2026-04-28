@@ -450,11 +450,11 @@ function Import-Autopilot {
     
     # Get settings configuration from settings.json
     if ($SettingsPath) {
-        try   { $settings = Get-ContentPath -Path $SettingsPath }
+        try   { $settings = Get-Content -Path $SettingsPath }
         catch { Write-Error -Message "Specified settings file was not found." -ErrorAction Stop }
     }
     else {
-        try     { $settings = Get-ContentPath -Path "./settings.json" }
+        try     { $settings = Get-Content -Path "./settings.json" }
         catch   { Write-Verbose "No settings.json found in current directory. Moving with default settings." }
     }
     
